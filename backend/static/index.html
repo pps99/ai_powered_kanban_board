@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Management MVP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #209dd7 0%, #753991 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #032147;
+            margin-bottom: 12px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            color: #888888;
+            margin-bottom: 24px;
+            font-size: 16px;
+        }
+        
+        .status {
+            background: #f5f5f5;
+            border-left: 4px solid #ecad0a;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 24px 0;
+            text-align: left;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            color: #032147;
+            font-size: 14px;
+        }
+        
+        .status-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: #209dd7;
+            color: white;
+            border-radius: 50%;
+            margin-right: 12px;
+            font-weight: bold;
+        }
+        
+        .api-test {
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        button {
+            background: #753991;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #5a2c6f;
+        }
+        
+        .response {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #032147;
+            text-align: left;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .success {
+            color: #209dd7;
+            font-weight: 600;
+        }
+        
+        .error {
+            color: #d32f2f;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kanban Studio</h1>
+        <p class="subtitle">Backend is running</p>
+        
+        <div class="status">
+            <div class="status-item">
+                <span class="status-icon">✓</span>
+                FastAPI server running on port 8000
+            </div>
+            <div class="status-item">
+                <span class="status-icon">✓</span>
+                Docker container operational
+            </div>
+            <div class="status-item">
+                <span class="status-icon">✓</span>
+                Ready for integration
+            </div>
+        </div>
+        
+        <div class="api-test">
+            <h3 style="color: #032147; margin-bottom: 16px;">Test API Connectivity</h3>
+            <button onclick="testHealth()">Test /health Endpoint</button>
+            <div id="response" class="response" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        async function testHealth() {
+            const responseDiv = document.getElementById('response');
+            responseDiv.style.display = 'block';
+            responseDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    responseDiv.innerHTML = `<span class="success">✓ Success</span><br/>Response: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    responseDiv.innerHTML = `<span class="error">✗ Error</span><br/>Status: ${response.status}`;
+                }
+            } catch (error) {
+                responseDiv.innerHTML = `<span class="error">✗ Error</span><br/>${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
