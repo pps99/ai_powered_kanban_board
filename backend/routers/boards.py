@@ -77,17 +77,19 @@ def add_card(
     assert_board_owner(board_id, user_id)
     col_id = int(body.column_id)
     conn = get_connection()
-    with conn:
-        max_pos = conn.execute(
-            "SELECT COALESCE(MAX(position), -1) FROM cards WHERE column_id = ?", (col_id,)
-        ).fetchone()[0]
-        ts = now()
-        cur = conn.execute(
-            "INSERT INTO cards (column_id, position, title, details, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (col_id, max_pos + 1, body.title, body.details, ts, ts),
-        )
-    card_id = str(cur.lastrowid)
-    conn.close()
+    try:
+        with conn:
+            max_pos = conn.execute(
+                "SELECT COALESCE(MAX(position), -1) FROM cards WHERE column_id = ?", (col_id,)
+            ).fetchone()[0]
+            ts = now()
+            cur = conn.execute(
+                "INSERT INTO cards (column_id, position, title, details, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (col_id, max_pos + 1, body.title, body.details, ts, ts),
+            )
+        card_id = str(cur.lastrowid)
+    finally:
+        conn.close()
     return {"id": card_id, "title": body.title, "details": body.details}
 
 
@@ -162,20 +164,21 @@ def delete_card(
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Card not found")
-    with conn:
-        conn.execute("DELETE FROM cards WHERE id = ?", (card_id,))
-        conn.execute(
-            "UPDATE cards SET position = position - 1 WHERE column_id = ? AND position > ?",
-            (row["column_id"], row["position"]),
-        )
-    conn.close()
+    try:
+        with conn:
+            conn.execute("DELETE FROM cards WHERE id = ?", (card_id,))
+            conn.execute(
+                "UPDATE cards SET position = position - 1 WHERE column_id = ? AND position > ?",
+                (row["column_id"], row["position"]),
+            )
+    finally:
+        conn.close()
 
 
 # ── Column routes ─────────────────────────────────────────────────────────────
 
 class UpdateColumnRequest(BaseModel):
     title: str | None = None
-    position: int | None = None
 
 
 @router.put("/{board_id}/columns/{column_id}")
@@ -194,10 +197,12 @@ def update_column(
 
     new_title = body.title if body.title is not None else col["title"]
     ts = now()
-    with conn:
-        conn.execute(
-            "UPDATE columns SET title = ?, updated_at = ? WHERE id = ?",
-            (new_title, ts, column_id),
-        )
-    conn.close()
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE columns SET title = ?, updated_at = ? WHERE id = ?",
+                (new_title, ts, column_id),
+            )
+    finally:
+        conn.close()
     return {"id": str(column_id), "title": new_title}

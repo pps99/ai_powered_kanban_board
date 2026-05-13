@@ -1,11 +1,12 @@
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from dependencies import assert_board_owner, current_user_id, now
 from init_db import get_connection
+from routers.boards import _move_card
 
 router = APIRouter(prefix="/api/ai")
 
@@ -51,7 +52,7 @@ class ChatRequest(BaseModel):
 
 
 class BoardUpdate(BaseModel):
-    action: str
+    action: Literal["add", "edit", "delete", "move"]
     card_id: str | None = None
     column_id: str | None = None
     position: int | None = None
@@ -67,7 +68,7 @@ def ai_chat(
     from ai.client import get_client, MODEL
     assert_board_owner(body.board_id, user_id)
 
-    board_context = json.dumps(body.board_state, indent=2)
+    board_context = json.dumps(body.board_state)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
@@ -101,22 +102,23 @@ def ai_chat(
 
     conn = get_connection()
     ts = now()
-    with conn:
-        conn.execute(
-            "INSERT INTO ai_messages (board_id, role, content, created_at) VALUES (?, ?, ?, ?)",
-            (body.board_id, "user", body.user_message, ts),
-        )
-        conn.execute(
-            "INSERT INTO ai_messages (board_id, role, content, created_at) VALUES (?, ?, ?, ?)",
-            (body.board_id, "assistant", user_response, ts),
-        )
-    conn.close()
+    try:
+        with conn:
+            conn.execute(
+                "INSERT INTO ai_messages (board_id, role, content, created_at) VALUES (?, ?, ?, ?)",
+                (body.board_id, "user", body.user_message, ts),
+            )
+            conn.execute(
+                "INSERT INTO ai_messages (board_id, role, content, created_at) VALUES (?, ?, ?, ?)",
+                (body.board_id, "assistant", user_response, ts),
+            )
+    finally:
+        conn.close()
 
     return {"user_response": user_response, "board_updates": [u.model_dump() for u in updates]}
 
 
 def _apply_board_updates(board_id: int, updates: list[BoardUpdate]):
-    from routers.boards import _move_card
     conn = get_connection()
     ts = now()
     try:

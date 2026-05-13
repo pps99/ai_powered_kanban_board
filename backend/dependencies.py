@@ -6,7 +6,7 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from init_db import get_connection
+from init_db import get_connection, now
 
 SECRET_KEY = os.getenv("JWT_SECRET", "dev-secret-please-change-in-production!!")
 ALGORITHM = "HS256"
@@ -28,10 +28,6 @@ def current_user_id(
         return int(payload["sub"])
     except jwt.PyJWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def assert_board_owner(board_id: int, user_id: int):

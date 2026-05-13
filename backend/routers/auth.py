@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from dependencies import assert_board_owner, current_user_id, make_token
+from dependencies import current_user_id, make_token
 from init_db import get_connection, hash_password
 
 router = APIRouter(prefix="/api/auth")
@@ -18,25 +18,17 @@ class LoginRequest(BaseModel):
 def login(body: LoginRequest):
     conn = get_connection()
     row = conn.execute(
-        "SELECT id FROM users WHERE username = ? AND password_hash = ?",
+        """
+        SELECT u.id, b.id AS board_id
+        FROM users u JOIN boards b ON b.user_id = u.id
+        WHERE u.username = ? AND u.password_hash = ?
+        """,
         (body.username, hash_password(body.password)),
     ).fetchone()
     conn.close()
     if not row:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = make_token(row["id"])
-    return {"token": token, "board_id": _get_board_id(row["id"])}
-
-
-def _get_board_id(user_id: int) -> int:
-    conn = get_connection()
-    row = conn.execute(
-        "SELECT id FROM boards WHERE user_id = ?", (user_id,)
-    ).fetchone()
-    conn.close()
-    if not row:
-        raise HTTPException(status_code=404, detail="Board not found")
-    return row["id"]
+    return {"token": make_token(row["id"]), "board_id": row["board_id"]}
 
 
 @router.post("/logout")
